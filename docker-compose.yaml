@@ -1,0 +1,37 @@
+version: '3'
+services:
+    db:
+        build: 
+            context: ./db
+            dockerfile: Dockerfile
+        command: --default-authentication-plugin=mysql_native_password
+        restart: always
+        environment:
+            MYSQL_ROOT_PASSWORD: abc@123
+            MYSQL_DATABASE: localdb
+        ports: 
+            - 3306:3306 
+    logger:
+        build: 
+            context: ./logger
+            dockerfile: Dockerfile
+        volumes: 
+            - ./logger/tmp:/fluentd/etc
+        command: '-c /fluentd/etc/fluentd.conf -v'
+        ports: 
+            - 24224:24224
+            - 24224:24224/udp
+        depends_on: 
+            - "db"
+    api:
+        build: 
+            context: ./api
+            dockerfile: Dockerfile
+        ports:
+            - 5000:80
+        logging: 
+            driver: fluentd
+            options: 
+                tag: "docker.{{.ID}}"
+        depends_on: 
+            - "logger"
